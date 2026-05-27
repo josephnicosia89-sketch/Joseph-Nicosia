@@ -74,7 +74,7 @@ export function seed() {
     'In Storage/On Rental': 'Awaiting pickup', 'Vault': 'Intake queue'
   };
   orders = seedData.map(function (r) {
-    var stage = stmap[r.inworkStatus || ''] || r.stage || 'Intake queue';
+    var stage = (r.stage && STAGES.indexOf(r.stage) >= 0) ? r.stage : (stmap[r.inworkStatus || ''] || 'Intake queue');
     var dt = r.deliveryType || '';
     if (!dt && r.shipMethod) {
       var sm = (r.shipMethod || '').toLowerCase();

@@ -1,36 +1,63 @@
-# Empire TDR Checklist — Single-File Tablet App
+# Empire TDR Checklist — Tablet App
 
-`Empire_TDR_Checklist.html` is the **entire app in one file**. There is nothing
-to install, no website to visit, and no other programs required. Copy this one
-file to a device, open it in a browser, and use it.
+Two ways to run the same checklist. The checklist body is identical; the only
+difference is how it's delivered.
 
-## Use it
+| Artifact | Use when |
+| --- | --- |
+| `Empire_TDR_Checklist.html` | A single self-contained file. No hosting, no setup. Open it in Chrome on the desktop or tablet. |
+| `hosted/` bundle | A true installable, full-screen app. Drop it on any **https** web address. |
 
-**Windows desktop:** save `Empire_TDR_Checklist.html` somewhere (e.g. your
-OneDrive folder), then double-click it — or right-click → Open with → **Chrome**
-or **Edge**. For a desktop icon, open it in Chrome/Edge and use the address-bar
-install button.
+`hosted/` is generated from the single file — run `python3 build-hosted.py`
+after any change so the two stay in sync. Do not hand-edit `hosted/index.html`.
 
-**Android tablet:** get the file onto the tablet (email it to yourself, copy it
-by USB, or download it from OneDrive), then open it with **Google Chrome**. For
-a home-screen icon: Chrome menu (⋮) → **Add to Home screen**.
+## Sending finished checklists to OneDrive (Power Automate)
 
-> Note: open the file in a real browser. Opening it inside the OneDrive app or
-> an email *preview* will not run it — download it first, then open in Chrome.
+The big green **SEND TO OFFICE** button posts each checklist to a Power
+Automate flow that writes it into
+`OneDrive - Empire Safe Company Inc\Logistics - Documents`. This works from
+**both** the single file and the hosted version, on desktop and tablet.
 
-## File checklists into OneDrive (no extra software)
+Set it up once (exact steps are in the app's **Setup & Help** screen):
 
-The big green **SEND TO OFFICE** button posts each finished checklist to a
-**Power Automate** flow that writes it into the
-`OneDrive - Empire Safe Company Inc\Logistics - Documents` folder.
+1. make.powerautomate.com → **Create → Instant cloud flow** → trigger
+   **When an HTTP request is received**.
+2. Add **OneDrive for Business → Create file**:
+   - **Folder Path:** `/Logistics - Documents`
+   - **File Name:** expression `json(triggerBody())?['fileName']`
+   - **File Content:** the trigger **Body** (`triggerBody()`)
+3. Save, copy the **HTTP POST URL**, and paste it into the app's
+   **Setup & Help** screen.
 
-Build the flow once and paste its HTTP POST URL into the app's
-**Setup & Help** screen — full step-by-step instructions are in that screen.
-Until the URL is set, **SEND TO OFFICE** falls back to the Android share sheet
-(pick OneDrive manually). The desktop **Save to Folder** button can also write
-straight into your synced OneDrive folder.
+Until that URL is saved, **SEND TO OFFICE** opens Setup & Help and prompts you
+to paste it (and holds the checklist in **Retry Unsent** so nothing is lost).
 
-## Updating
+On the **Windows desktop**, **Save to Folder** also writes straight into your
+synced OneDrive folder with no flow at all.
 
-When the office produces a newer version, just replace the old
-`Empire_TDR_Checklist.html` with the new one on each device.
+## Standalone app — the hosting decision
+
+A true full-screen app (its own icon, no browser address bar) and the Android
+**share sheet** both require the app to be served from an **https** address.
+A plain local file cannot do this — Chrome only makes a shortcut that opens in
+a browser tab. This is a browser security rule, not a bug.
+
+Recommended hosting (neither is GitHub):
+
+- **Company intranet / IT web server** (IIS, Apache, etc.) — simplest if you
+  have IT. Copy the contents of `hosted/` to a folder served over https.
+- **Azure Storage static website** in your own Microsoft 365 tenant — same
+  vendor as your OneDrive. Enable "Static website" on a storage account and
+  upload the `hosted/` files in the Azure portal. No dev tools, no GitHub.
+
+After hosting, open the address in Chrome on the tablet → menu (⋮) →
+**Install app**.
+
+### If you don't host
+
+Use `Empire_TDR_Checklist.html` as a single file. Everything works except the
+full-screen app look:
+- Desktop: double-click → opens in Chrome/Edge; **Save to Folder** files to
+  OneDrive; **SEND TO OFFICE** files via the flow.
+- Tablet: open in Chrome; **Add to Home screen** makes a shortcut;
+  **SEND TO OFFICE** (Power Automate) files to OneDrive in one tap.

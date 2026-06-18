@@ -1,0 +1,46 @@
+name: Deploy Empire TDR Checklist to GitHub Pages
+
+# Publishes the standalone tablet checklist in tdr/ to GitHub Pages.
+# The site root serves tdr/index.html, so the install/PWA URL is the
+# repository's github.io address.
+
+on:
+  push:
+    branches:
+      - claude/exciting-ride-u4c2kh
+    paths:
+      - 'tdr/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; cancel in-progress runs for the same ref.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload checklist as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./tdr
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

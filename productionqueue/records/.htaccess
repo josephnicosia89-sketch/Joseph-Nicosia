@@ -1,0 +1,18 @@
+# ---------------------------------------------------------------------------
+# Saved inspection records live in this directory. Deny ALL direct web access.
+# Records must only ever be read back through /api/load.php and /api/list.php,
+# which read the files server-side and return them. Nobody should be able to
+# load a record by typing or guessing its URL.
+#
+# save.php also re-creates this file if the directory is generated at runtime,
+# so the lockdown is present even on a freshly created records directory.
+# ---------------------------------------------------------------------------
+
+# Apache 2.4 (PHP 8.2 hosting)
+Require all denied
+
+# Fallback for the rare Apache 2.2 host.
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

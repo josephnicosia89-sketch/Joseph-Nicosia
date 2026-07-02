@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Empire Safe — Production Queue
+# HTTP Basic Auth for the ENTIRE site root: index.html AND everything under
+# /api/. The browser prompts once when the page is opened on a tablet, then
+# automatically re-sends the cached credentials on every fetch() to /api/ —
+# the JavaScript never has to manage an auth header.
+# ---------------------------------------------------------------------------
+
+AuthType Basic
+AuthName "Empire Safe Production Queue"
+
+# IMPORTANT: replace this with the ABSOLUTE server path to your .htpasswd file.
+# On this FTP-scoped subdomain the file typically sits in the site root, e.g.:
+#   AuthUserFile "/home/YOUR_ACCOUNT/productionqueue.empiresafe.com/.htpasswd"
+# Ask your host for the absolute path if you are unsure. Create the file
+# yourself with the htpasswd tool (see below) — do NOT commit real credentials.
+AuthUserFile "/REPLACE/WITH/ABSOLUTE/PATH/TO/.htpasswd"
+
+Require valid-user
+
+# Never serve the auth files themselves (.htaccess, .htpasswd), even if the
+# name is guessed. Apache 2.4 (PHP 8.2 hosting) syntax.
+<FilesMatch "^\.ht">
+  Require all denied
+</FilesMatch>
+
+# Send this app's own JSON as application/json for any static reads.
+AddType application/json .json

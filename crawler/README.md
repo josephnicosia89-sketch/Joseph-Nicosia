@@ -85,7 +85,7 @@ The manual steps below do the same thing one piece at a time.
    node crawler\index.js
    ```
 
-6. Schedule it (default 05:03 daily: after the 5:00 report refresh, before the 5:10 queue task and the 5:45 brief):
+6. Schedule it (default 05:03 daily: after the 5:00 report refresh, before the 5:10 queue task and the 5:25 brief):
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:03
@@ -136,6 +136,53 @@ Type / Date / Num / Item / Memo / Amount / Open Balance layout.
 
 ## Wiring into the Claude morning brief
 
+Already done: the scheduled Routine **"Morning brief"** reads
+`MorningBrief/brief.md` and `MorningBrief/latest.json` from OneDrive as its
+source 2 and renders an "Inwork pipeline and QuickBooks" section, feeds the
+COO scorecard, and reports the crawler's status in Feed status. The full prompt
+is versioned in `docs/morning-brief-routine-prompt.md`.
+
+Weekday timeline, New York time (the Claude routines are stored as UTC cron
+expressions, so they shift by an hour when daylight saving time ends):
+
+| Time | What runs | Where |
+|---|---|---|
+| 5:00 | Inwork report refresh stamps "Morning Brief - New Sales Orders.csv" | Excel macro on the QuickBooks PC |
+| 5:03 | This crawler reads the Q: drive report and publishes `brief.md` / `latest.json` to OneDrive\MorningBrief | Windows Task Scheduler on EMPIRE-JOEN |
+| 5:10 | "Production queue update" writes `queue-import-YYYY-MM-DD.csv` | Claude routine (09:10 UTC) |
+| 5:25 | "Morning brief" reads all of the above, publishes the page, pushes to the phone by about 5:35 | Claude routine (09:25 UTC) |
+
+## Switching QuickBooks off
+
+Create an empty file `crawler\quickbooks.off`. The daily task then skips the
+QuickBooks export, `setup.ps1` writes an empty `quickbooksSource`, and the brief
+says "QuickBooks: off". Delete the file (and re-run setup) to turn it back on.
+
+```powershell
+New-Item C:\Users\JoeN\SafeTech\crawler\quickbooks.off -ItemType File
+```
+
+## Running somewhere without the OneDrive sync client
+
+Set `graph.clientId` in `crawler/config.json` to an Entra ID app registration
+(platform *Mobile and desktop applications*, redirect
+`https://login.microsoftonline.com/common/oauth2/nativeclient`, *Allow public
+client flows* = Yes, delegated permission `Files.ReadWrite`). Then run
+`npm run brief:login`: it prints a device code, you sign in once in a browser,
+and the token is cached in `~/.safetech-crawler/`. From then on `node
+crawler/index.js` downloads the report and uploads the brief via Graph.
+`inworkSource` may also be a OneDrive/SharePoint sharing link or a
+`graph:drives/{driveId}/items/{itemId}` id (the ids of both known copies of
+the report are in `config.example.json` under `knownItems`).
+
+Without QuickBooks on the same machine you can still feed the crawler a
+QuickBooks report export: run *Reports → Sales → Open Sales Orders by
+Customer*, export to Excel into `OneDrive/MorningBrief/`, and point
+`quickbooksSource` at that `.xlsx`. The parser understands the
+Type / Date / Num / Item / Memo / Amount / Open Balance layout.
+
+## Wiring into the Claude morning brief
+
 Already done: the scheduled Routine **"Morning brief"** (weekdays, 09:45 UTC)
 reads `MorningBrief/brief.md` and `MorningBrief/latest.json` from OneDrive as
 its source 2 and renders an "Inwork pipeline and QuickBooks" section, feeds
@@ -145,9 +192,7 @@ crawler: not yet publishing" and continues from the existing 5:00 AM
 "Morning Brief - New Sales Orders.csv" export. The full prompt is versioned in
 `docs/morning-brief-routine-prompt.md`.
 
-Timing: the scheduled task runs at 05:03 local, after the 5:00 AM report
-refresh and before the 5:10 "Production queue update" task and the 5:45 AM
-Morning brief, so brief.md is fresh when the brief reads it.
+
 
 ## What the crawler computes
 

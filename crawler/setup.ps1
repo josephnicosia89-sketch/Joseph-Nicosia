@@ -33,8 +33,12 @@ Step 1 'Checking Node.js'
 $portableNode = Join-Path $repo 'node'
 if (Test-Path (Join-Path $portableNode 'node.exe')) { $env:Path = "$portableNode;$env:Path" }
 $node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) {
-  Write-Host 'Node.js not found. Trying winget (you may get a Windows "allow this app" prompt - click Yes)...'
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $node -and -not $isAdmin) {
+  Write-Host 'Node.js not found and this window is not running as administrator, so skipping the system installer.'
+}
+if (-not $node -and $isAdmin) {
+  Write-Host 'Node.js not found. Trying winget...'
   try { winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements } catch { Write-Warning "winget failed: $_" }
   $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
   $node = Get-Command node -ErrorAction SilentlyContinue

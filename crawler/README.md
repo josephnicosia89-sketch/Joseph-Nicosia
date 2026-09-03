@@ -27,13 +27,20 @@ has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 
 ## One-time setup on the QuickBooks PC (short version)
 
-1. Get the code onto the PC: on GitHub open this branch, click **Code → Download
-   ZIP**, and unzip it to `C:\SafeTech` (any folder works).
-2. Open QuickBooks Desktop with the company file, logged in as Admin.
-3. Open **PowerShell** (Start menu, type PowerShell), then:
+1. Open QuickBooks Desktop with the company file, logged in as Admin.
+2. Open **PowerShell** (Start menu, type PowerShell) and paste this one line:
 
    ```powershell
-   cd C:\SafeTech
+   irm https://raw.githubusercontent.com/josephnicosia89-sketch/Joseph-Nicosia/claude/quickbooks-inwork-crawler-t5f46e/crawler/bootstrap.ps1 | iex
+   ```
+
+   `bootstrap.ps1` downloads the code into `%USERPROFILE%\SafeTech`, runs
+   `crawler\setup.ps1`, prints a status summary and waits for Enter. No admin
+   rights are needed: Node.js is unpacked as a portable copy inside the folder.
+3. Or do it by hand: download the branch ZIP from GitHub, unzip it anywhere, then
+
+   ```powershell
+   cd <that folder>
    powershell -ExecutionPolicy Bypass -File crawler\setup.ps1
    ```
 

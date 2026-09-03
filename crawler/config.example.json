@@ -1,0 +1,22 @@
+{
+  "_comment": "Copy to crawler/config.json and edit. Paths may be absolute, relative to the synced OneDrive folder, %ENV% expanded, a OneDrive/SharePoint sharing link, or graph:/path-in-my-OneDrive.",
+  "inworkSource": "Desktop/Sales Order Inwork Report.xlsm",
+  "quickbooksSource": "MorningBrief/quickbooks-export.json",
+  "outputDir": "data/brief",
+  "publishFolder": "MorningBrief",
+  "publish": true,
+  "lookbackDays": 1,
+  "dueSoonDays": 7,
+  "oneDriveLocalRoot": "",
+  "graph": {
+    "_comment": "Only needed when the crawler runs on a machine without the OneDrive sync client. Register an app in Entra ID (Mobile/desktop, redirect https://login.microsoftonline.com/common/oauth2/nativeclient, Allow public client flows = Yes, delegated permission Files.ReadWrite).",
+    "clientId": "",
+    "tenantId": "organizations",
+    "scopes": ["Files.ReadWrite", "User.Read"]
+  },
+  "knownItems": {
+    "_comment": "Graph ids for the Inwork report found on OneDrive, for graph:drives/{driveId}/items/{itemId} style sources.",
+    "inworkDesktop": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFBKSJKP5PDRLFC23VOXGDUDHYUU",
+    "inworkDocuments": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFHCDZA6J4YYBZF3GCVRBVGJIY6L"
+  }
+}

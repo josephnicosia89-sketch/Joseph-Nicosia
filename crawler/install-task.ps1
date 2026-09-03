@@ -6,7 +6,7 @@
   powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:45
 #>
 param(
-  [string]$Time = '05:45',
+  [string]$Time = '05:05',
   [string]$TaskName = 'SafeTech Morning Brief',
   [switch]$Uninstall
 )

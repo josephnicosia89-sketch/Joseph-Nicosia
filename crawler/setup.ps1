@@ -19,7 +19,7 @@
 #>
 param(
   [string]$InworkPath = 'Q:\Sales Order Inwork Report.xlsm',
-  [string]$Time = '05:45',
+  [string]$Time = '05:05',
   [switch]$SkipQuickBooks,
   [switch]$SkipTask
 )

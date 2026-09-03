@@ -49,7 +49,7 @@ has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 
 `setup.ps1` installs Node.js if needed, writes `crawler\config.json` for
 `Q:\Sales Order Inwork Report.xlsm` (recording the network path behind Q:),
-runs the QuickBooks export and the crawler once, and registers the 05:45 task.
+runs the QuickBooks export and the crawler once, and registers the 05:05 task.
 The manual steps below do the same thing one piece at a time.
 
 ## One-time setup on the QuickBooks PC (manual)
@@ -85,10 +85,10 @@ The manual steps below do the same thing one piece at a time.
    node crawler\index.js
    ```
 
-6. Schedule it (default 05:45 daily, before the brief):
+6. Schedule it (default 05:05 daily: after the 5:00 report refresh, before the 5:10 queue task and the 5:45 brief):
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:45
+   powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:05
    ```
 
    The task runs `crawler\run-morning.cmd`, which does the QuickBooks export
@@ -145,8 +145,9 @@ crawler: not yet publishing" and continues from the existing 5:00 AM
 "Morning Brief - New Sales Orders.csv" export. The full prompt is versioned in
 `docs/morning-brief-routine-prompt.md`.
 
-Timing: the scheduled task here runs at 05:45 local so the files are in
-OneDrive well before the 09:45 UTC brief (05:45 Eastern).
+Timing: the scheduled task runs at 05:05 local, after the 5:00 AM report
+refresh and before the 5:10 "Production queue update" task and the 5:45 AM
+Morning brief, so brief.md is fresh when the brief reads it.
 
 ## What the crawler computes
 

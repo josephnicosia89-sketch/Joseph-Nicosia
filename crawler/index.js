@@ -43,9 +43,14 @@ function parseArgs(argv) {
 export function loadConfig(explicit) {
   const candidates = [explicit, path.join(here, 'config.json'), path.join(here, 'config.example.json')].filter(Boolean);
   for (const c of candidates) {
-    if (fs.existsSync(c)) return { ...JSON.parse(fs.readFileSync(c, 'utf8')), _file: c };
+    if (fs.existsSync(c)) return { ...JSON.parse(readJsonText(c)), _file: c };
   }
   return {};
+}
+
+/** Read a text file as UTF-8 and drop a leading byte-order mark (Windows PowerShell adds one). */
+export function readJsonText(file) {
+  return fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
 }
 
 function log(quiet, ...m) { if (!quiet) console.log(...m); }
@@ -105,7 +110,7 @@ export async function run(args) {
 
   let previous = null;
   const latestPath = path.join(outDir, 'latest.json');
-  if (fs.existsSync(latestPath)) { try { previous = JSON.parse(fs.readFileSync(latestPath, 'utf8')); } catch (e) { /* */ } }
+  if (fs.existsSync(latestPath)) { try { previous = JSON.parse(readJsonText(latestPath)); } catch (e) { /* */ } }
 
   const brief = buildBrief({ inwork, quickbooks, previous, lookbackDays, dueSoonDays });
   const md = renderBriefMarkdown(brief);

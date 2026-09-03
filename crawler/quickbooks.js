@@ -265,7 +265,7 @@ export function loadQuickBooks(file) {
   const ext = path.extname(file).toLowerCase();
   let out;
   if (ext === '.json') {
-    out = normalizeQuickBooksJson(JSON.parse(fs.readFileSync(file, 'utf8')));
+    out = normalizeQuickBooksJson(JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')));
   } else {
     const wb = XLSX.read(fs.readFileSync(file), { type: 'buffer' });
     out = parseQuickBooksReportWorkbook(wb);

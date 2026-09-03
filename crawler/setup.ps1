@@ -109,7 +109,7 @@ if (Test-Path $configPath) {
   Copy-Item $configPath "$configPath.bak" -Force
   Write-Host "Existing config backed up to config.json.bak"
 }
-$cfg | ConvertTo-Json -Depth 4 | Set-Content -Path $configPath -Encoding UTF8
+[System.IO.File]::WriteAllText($configPath, ($cfg | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Wrote $configPath"
 
 # ── 4. QuickBooks export ──
@@ -120,7 +120,8 @@ if (-not $SkipQuickBooks) {
     if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
   } catch {
     Write-Warning "QuickBooks export did not complete: $_"
-    Write-Warning 'The crawler still works from the Inwork report alone. Fix QuickBooks access later and re-run: powershell -ExecutionPolicy Bypass -File crawler\quickbooks-export.ps1'
+    Write-Warning 'For the first connection QuickBooks Desktop must be OPEN on this PC, with the company file loaded, signed in as the QuickBooks "Admin" user, in single-user mode. Then re-run: powershell -ExecutionPolicy Bypass -File crawler\quickbooks-export.ps1'
+    Write-Warning 'The crawler still works from the Inwork report alone until then.'
   }
 } else { Step 4 'Skipping QuickBooks export (-SkipQuickBooks)' }
 

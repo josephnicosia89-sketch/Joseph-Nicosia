@@ -29,15 +29,28 @@ try {
   $src = Get-ChildItem $unzip -Directory | Select-Object -First 1
   if (-not $src -or -not (Test-Path (Join-Path $src.FullName 'crawler\setup.ps1'))) { throw "Unpacked folder does not contain crawler\setup.ps1 (looked in $unzip)" }
 
+  # Never sit inside the install folder while touching it (a previous run may have left us there).
+  Set-Location $env:USERPROFILE
   if (Test-Path $dest) {
-    $old = "$dest-old-$stamp"
-    Say "Existing $dest found; keeping it as $old"
-    Rename-Item $dest $old
-    # Carry over an existing config so re-runs keep your settings.
-    if (Test-Path (Join-Path $old 'crawler\config.json')) { $keepConfig = Join-Path $old 'crawler\config.json' }
+    Say "Existing $dest found; updating it in place (config, portable Node and dependencies are kept)"
+    Get-ChildItem $src.FullName -Force | ForEach-Object {
+      $target = Join-Path $dest $_.Name
+      if ($_.PSIsContainer) {
+        # Copy folder contents over the existing folder, but never overwrite crawler\config.json.
+        Get-ChildItem $_.FullName -Recurse -Force -File | ForEach-Object {
+          $rel = $_.FullName.Substring($src.FullName.Length + 1)
+          if ($rel -ieq 'crawler\config.json') { return }
+          $dst = Join-Path $dest $rel
+          New-Item -ItemType Directory -Path (Split-Path $dst -Parent) -Force | Out-Null
+          Copy-Item $_.FullName $dst -Force
+        }
+      } else {
+        Copy-Item $_.FullName $target -Force
+      }
+    }
+  } else {
+    Move-Item $src.FullName $dest
   }
-  Move-Item $src.FullName $dest
-  if ($keepConfig) { Copy-Item $keepConfig (Join-Path $dest 'crawler\config.json') -Force; Say "Restored previous crawler\config.json" }
   Say "Code is in place: $(Test-Path (Join-Path $dest 'crawler\setup.ps1'))" 'Green'
 
   Say ""

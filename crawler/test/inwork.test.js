@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseInworkWorkbook, mapColumns, canonicalStatus } from '../inwork.js';
-import { inworkWorkbook } from './fixtures.js';
+import { inworkWorkbook, realLayoutWorkbook } from './fixtures.js';
 
 test('maps Inwork headers to fields', () => {
   const m = mapColumns(['In Production', 'Customer Name', 'Date', 'On Calendar', 'Deliver By Date', 'Num', 'Item', 'Amount', 'Rep', 'Paid', 'Balance', 'Ship Via', 'Payment Method', 'Complete']);
@@ -51,7 +51,35 @@ test('parses the Inwork workbook with status sections', () => {
   assert.equal(lj.deliverByDate, '2024-08-13', 'M/D without a year borrows the order year');
 
   const done = bySo['64444'];
-  assert.equal(done.complete, true);
-  assert.equal(done.inworkStatus, 'Completed');
+  assert.equal(done.productionComplete, true);
+  assert.equal(done.complete, false);
+  assert.equal(done.inworkStatus, 'In Transit');
   assert.ok(!r.orders.some(o => /total/i.test(o.so) || /total/i.test(o.customer)), 'total rows are skipped');
+});
+
+test('handles the real workbook layout: sheet-per-status, footer rows, serial dates, master list', () => {
+  const r = parseInworkWorkbook(realLayoutWorkbook());
+  assert.deepEqual(r.skippedSheets, ['tblEvents']);
+  const bySo = Object.fromEntries(r.orders.map(o => [o.so, o]));
+  assert.deepEqual(Object.keys(bySo).sort(), ['60267', '63662', '64791', '64883', '64956', '64993', '65038', '65050'], 'footer count rows (4, 1, 84) are not orders');
+
+  assert.equal(bySo['63662'].inworkStatus, 'In Production');
+  assert.equal(bySo['63662'].productionComplete, true, 'Complete column means built, not closed');
+  assert.equal(bySo['63662'].complete, false);
+  assert.equal(bySo['65038'].inworkStatus, 'Hold for Confirm', 'HFC sheet');
+  assert.equal(bySo['64791'].inworkStatus, 'In Transit');
+  assert.equal(bySo['64791'].shipDate, '2026-07-15', 'Ship Date column is a date, not a carrier');
+  assert.equal(bySo['64791'].shipMethod, 'ABF');
+  assert.equal(bySo['60267'].inworkStatus, 'In Storage/On Rental');
+
+  assert.equal(bySo['64883'].deliverBy, '2026-07-16', 'Excel serial deliver-by shown as a date');
+  assert.equal(bySo['64883'].deliverByDate, '2026-07-16');
+  assert.equal(bySo['64993'].model, '', 'zero cells are blank');
+  assert.equal(bySo['64993'].rep, '');
+
+  const ms = bySo['64956'];
+  assert.equal(ms.deliverBy, '2 weeks', 'status-sheet text kept');
+  assert.equal(ms.deliverByDate, '', 'unparseable text does not borrow the master list date');
+  assert.equal(ms.reqDate, '2026-08-28', 'master-list requested date kept separately');
+  assert.equal(bySo['65050'].inworkStatus, 'Hold for Confirm', 'Status column on the master list is honoured');
 });

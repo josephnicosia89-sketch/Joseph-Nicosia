@@ -7,7 +7,13 @@ export function normKey(s) {
 export function cellText(v) {
   if (v == null) return '';
   if (v instanceof Date) return toISODate(v);
+  if (v === 0) return ''; // an empty cell that Excel/QuickBooks filled with 0
   return String(v).trim();
+}
+
+/** True when a cell holds an Excel date serial (a number in the plausible date range). */
+export function isDateSerial(v) {
+  return typeof v === 'number' && v > 20000 && v < 80000;
 }
 
 export function isBlank(v) {

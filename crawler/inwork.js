@@ -10,20 +10,25 @@ import fs from 'node:fs';
 import XLSX from 'xlsx';
 import {
   normKey, cellText, isBlank, nonEmptyCells, parseMoney, round2, toISODate,
-  computePaySt, deliveryTypeFromShipMethod, truthy
+  computePaySt, deliveryTypeFromShipMethod, truthy, isDateSerial
 } from './lib/util.js';
 
 export const INWORK_STATUSES = ['In Production', 'Service', 'Hold for Confirm', 'In Transit', 'In Storage/On Rental', 'Vault', 'Completed'];
 
 const STATUS_ALIASES = {
   inproduction: 'In Production', production: 'In Production',
-  service: 'Service', svc: 'Service',
-  holdforconfirm: 'Hold for Confirm', hold: 'Hold for Confirm', onhold: 'Hold for Confirm',
+  service: 'Service', svc: 'Service', services: 'Service',
+  holdforconfirm: 'Hold for Confirm', hfc: 'Hold for Confirm', hold: 'Hold for Confirm', onhold: 'Hold for Confirm',
   intransit: 'In Transit', transit: 'In Transit', shipped: 'In Transit',
-  instorageonrental: 'In Storage/On Rental', instorage: 'In Storage/On Rental', onrental: 'In Storage/On Rental', storage: 'In Storage/On Rental', rental: 'In Storage/On Rental',
-  vault: 'Vault',
-  completed: 'Completed', complete: 'Completed', done: 'Completed'
+  instorageonrental: 'In Storage/On Rental', instorage: 'In Storage/On Rental', onrental: 'In Storage/On Rental',
+  storage: 'In Storage/On Rental', rental: 'In Storage/On Rental', rentals: 'In Storage/On Rental',
+  storagerentals: 'In Storage/On Rental', storageandrentals: 'In Storage/On Rental', storagerental: 'In Storage/On Rental',
+  vault: 'Vault', vaults: 'Vault',
+  completed: 'Completed', complete: 'Completed', done: 'Completed', closed: 'Completed', closedinvoiced: 'Completed'
 };
+
+// Sheets that list orders but carry no status of their own (a master list).
+const NEUTRAL_SHEETS = new Set(['opensos', 'openso', 'allopen', 'all', 'orders', 'salesorders', 'data', 'sheet1']);
 
 export function canonicalStatus(text) {
   const k = normKey(text);
@@ -37,9 +42,11 @@ export function canonicalStatus(text) {
 // Column hints, checked exact-first then substring. Order matters for the
 // substring pass (more specific keys claim their columns first).
 const COLS = {
-  deliverBy: ['deliverbydate', 'deliverby', 'deliveryby', 'duedate', 'deliverydate', 'deldate', 'requested'],
+  deliverBy: ['deliverbydate', 'deliverby', 'deliveryby', 'duedate', 'deliverydate', 'deldate', 'reqdate', 'reqddate', 'requesteddate', 'requested'],
   onCalendar: ['oncalendar', 'calendar', 'scheduled'],
   so: ['num', 'so', 'sonum', 'sono', 'so#', 'salesorder', 'salesorder#', 'ordernumber', 'order#', 'ordernum'],
+  status: ['status', 'inworkstatus', 'inwork', 'stage'],
+  shipDate: ['shipdate', 'dateshipped', 'shippedon', 'shipped', 'shippeddate'],
   customer: ['customername', 'customer', 'client', 'company', 'account', 'name'],
   date: ['date', 'sodate', 'orderdate', 'txndate'],
   item: ['item', 'model', 'itemdescription', 'description', 'product', 'memo'],
@@ -47,7 +54,7 @@ const COLS = {
   rep: ['rep', 'salesrep', 'salesperson'],
   paid: ['paid', 'amountpaid', 'deposit', 'depositreceived', 'received'],
   balance: ['balance', 'balancedue', 'openbalance', 'due'],
-  shipVia: ['shipvia', 'shipmethod', 'shipping', 'ship', 'via'],
+  shipVia: ['shipvia', 'shipmethod', 'carrier', 'via', 'shipping'],
   paymentMethod: ['paymentmethod', 'paymethod', 'method', 'payment'],
   complete: ['complete', 'completed', 'done', 'closed'],
   notes: ['notes', 'comments', 'remarks']
@@ -95,10 +102,13 @@ export function parseInworkRows(rows, sheetName) {
   const header = rows[headerIdx].map(cellText);
   const cols = mapColumns(header);
 
+  // One sheet per status ("In Production", "HFC", "Storage & Rentals", ...):
+  // the sheet name is the status unless the sheet is a neutral master list.
+  const sheetStatus = NEUTRAL_SHEETS.has(normKey(sheetName)) ? '' : canonicalStatus(sheetName);
   // A status label sitting in the header row (e.g. column A = "In Production")
   // marks that column as the section column.
   let statusCol = -1;
-  let currentStatus = '';
+  let currentStatus = sheetStatus;
   header.forEach((h, i) => {
     if (statusCol < 0 && canonicalStatus(h) && !Object.values(cols).includes(i)) {
       statusCol = i; currentStatus = canonicalStatus(h);
@@ -134,22 +144,37 @@ export function parseInworkRows(rows, sheetName) {
     if (/^total\b/i.test(soRaw) || /^total\b/i.test(custRaw)) continue;
     if (!/\d/.test(soRaw)) continue; // SO numbers always carry digits
 
+    const modelRaw = cols.item != null ? cellText(row[cols.item]) : '';
+    const dateRaw = cols.date != null ? row[cols.date] : '';
+    // Footer rows: the sheet's order count sits in the Num column next to the
+    // money totals, with no customer, no item and no date.
+    if (!custRaw && !currentCustomer && !modelRaw && isBlank(dateRaw)) continue;
+
     const so = soRaw.replace(/\.0+$/, '');
+    const rowStatus = cols.status != null ? canonicalStatus(row[cols.status]) : '';
     const amount = round2(parseMoney(cols.amount != null ? row[cols.amount] : 0));
     const paid = round2(parseMoney(cols.paid != null ? row[cols.paid] : 0));
     let balance = cols.balance != null && !isBlank(row[cols.balance]) ? round2(parseMoney(row[cols.balance])) : round2(amount - paid);
-    const date = toISODate(cols.date != null ? row[cols.date] : '');
+    const date = toISODate(dateRaw);
     const refYear = date ? +date.slice(0, 4) : undefined;
-    const deliverBy = cols.deliverBy != null ? cellText(row[cols.deliverBy]) : '';
-    let deliverByDate = toISODate(cols.deliverBy != null ? row[cols.deliverBy] : '', refYear);
+    const deliverByRaw = cols.deliverBy != null ? row[cols.deliverBy] : '';
+    let deliverByDate = toISODate(deliverByRaw, refYear);
+    // A real Excel date shows as its serial number in text form; show the date instead.
+    const deliverBy = isDateSerial(deliverByRaw) ? deliverByDate : cellText(deliverByRaw);
     // "8/13" with no year: if that lands before the order date, roll a year forward.
     if (deliverByDate && date && deliverByDate < date && !/\d{4}|\d{2}$/.test(deliverBy.replace(/^\d{1,2}[\/\-]\d{1,2}[\/\-]?/, ''))) {
       const y = +deliverByDate.slice(0, 4) + 1;
       deliverByDate = String(y) + deliverByDate.slice(4);
     }
-    const shipMethod = cols.shipVia != null ? cellText(row[cols.shipVia]) : '';
-    const completeFlag = cols.complete != null ? truthy(row[cols.complete]) : false;
-    const status = completeFlag ? 'Completed' : (currentStatus || '');
+    const shipViaRaw = cols.shipVia != null ? row[cols.shipVia] : '';
+    let shipDate = cols.shipDate != null ? toISODate(row[cols.shipDate]) : '';
+    let shipMethod = cellText(shipViaRaw);
+    if (isDateSerial(shipViaRaw) || (shipMethod && toISODate(shipViaRaw))) { if (!shipDate) shipDate = toISODate(shipViaRaw); shipMethod = ''; }
+    // "Complete" on an open-order sheet means production is complete (built,
+    // waiting to deliver), not that the order is closed. Closed orders leave
+    // the report (ClosedInvoiced sheet) or sit under a Completed status.
+    const productionComplete = cols.complete != null ? truthy(row[cols.complete]) : false;
+    const status = rowStatus || currentStatus || '';
     const customer = custRaw || currentCustomer;
 
     orders.push({
@@ -159,17 +184,19 @@ export function parseInworkRows(rows, sheetName) {
       onCalendar: cols.onCalendar != null ? cellText(row[cols.onCalendar]) : '',
       deliverBy,
       deliverByDate,
-      model: cols.item != null ? cellText(row[cols.item]) : '',
+      model: modelRaw,
       amount,
       total: amount,
       paid,
       balance,
       rep: cols.rep != null ? cellText(row[cols.rep]) : '',
       shipMethod,
+      shipDate,
       deliveryType: deliveryTypeFromShipMethod(shipMethod),
       paymentMethod: cols.paymentMethod != null ? cellText(row[cols.paymentMethod]) : '',
       paymentStatus: computePaySt(amount, paid),
-      complete: completeFlag || status === 'Completed',
+      productionComplete,
+      complete: status === 'Completed',
       inworkStatus: status,
       notes: cols.notes != null ? cellText(row[cols.notes]) : '',
       sheet: sheetName,
@@ -194,8 +221,17 @@ export function parseInworkWorkbook(wb) {
       // richer record but never lose a Completed flag.
       const prev = seen.get(o.so);
       if (!prev) { seen.set(o.so, o); result.orders.push(o); continue; }
+      // Same SO on a status sheet and on the master list: the status sheet wins
+      // on status and on the hand-written deliver-by text; the other copy only
+      // fills gaps. A parsed date that disagrees is kept as reqDate.
+      if (!prev.inworkStatus && o.inworkStatus) prev.inworkStatus = o.inworkStatus;
       if (o.complete && !prev.complete) { prev.complete = true; prev.inworkStatus = 'Completed'; }
-      ['deliverBy', 'deliverByDate', 'rep', 'shipMethod', 'paymentMethod', 'notes', 'model', 'onCalendar'].forEach(k => { if (!prev[k] && o[k]) prev[k] = o[k]; });
+      if (o.productionComplete) prev.productionComplete = true;
+      if (!prev.deliverBy && o.deliverBy) { prev.deliverBy = o.deliverBy; prev.deliverByDate = o.deliverByDate; }
+      else if (o.deliverByDate && o.deliverByDate !== prev.deliverByDate) prev.reqDate = o.deliverByDate;
+      ['rep', 'shipMethod', 'shipDate', 'paymentMethod', 'notes', 'model', 'onCalendar', 'customer'].forEach(k => { if (!prev[k] && o[k]) prev[k] = o[k]; });
+      if (!prev.deliveryType && o.deliveryType) prev.deliveryType = o.deliveryType;
+      if (!prev.amount && o.amount) { prev.amount = o.amount; prev.total = o.amount; prev.paid = o.paid; prev.balance = o.balance; prev.paymentStatus = o.paymentStatus; }
     }
   }
   return result;

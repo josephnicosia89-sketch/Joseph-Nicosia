@@ -54,7 +54,8 @@ function slim(o) {
   return {
     so: o.so, customer: o.customer, model: o.model, rep: o.rep, date: o.date, deliverBy: o.deliverBy, deliverByDate: o.deliverByDate,
     amount: o.amount, paid: o.paid, balance: o.balance, paymentStatus: o.paymentStatus, paymentMethod: o.paymentMethod,
-    shipMethod: o.shipMethod, deliveryType: o.deliveryType, inworkStatus: o.inworkStatus, dest: o.dest || '', source: o.source
+    shipMethod: o.shipMethod, deliveryType: o.deliveryType, inworkStatus: o.inworkStatus, productionComplete: !!o.productionComplete,
+    shipDate: o.shipDate || '', reqDate: o.reqDate || '', dest: o.dest || '', source: o.source
   };
 }
 
@@ -79,12 +80,16 @@ export function buildBrief({ inwork, quickbooks, previous, now = new Date(), loo
 
   const newOrders = open.filter(o => (o.date && o.date >= since) || (hasPrev && !prevMap.has(o.so)))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const dueSoon = open.filter(o => o.deliverByDate && o.deliverByDate >= today && o.deliverByDate <= horizon)
+  // Storage/rental jobs are not deliveries: their dates never count as overdue.
+  const deliverable = open.filter(o => o.inworkStatus !== 'In Storage/On Rental');
+  const storageJobs = open.filter(o => o.inworkStatus === 'In Storage/On Rental');
+  const dueSoon = deliverable.filter(o => o.deliverByDate && o.deliverByDate >= today && o.deliverByDate <= horizon)
     .sort((a, b) => a.deliverByDate.localeCompare(b.deliverByDate));
-  const overdue = open.filter(o => o.deliverByDate && o.deliverByDate < today)
+  const overdue = deliverable.filter(o => o.deliverByDate && o.deliverByDate < today)
     .sort((a, b) => a.deliverByDate.localeCompare(b.deliverByDate))
     .map(o => ({ ...o, daysLate: daysBetween(o.deliverByDate, today) }));
-  const noDate = open.filter(o => !o.deliverByDate);
+  const noDate = deliverable.filter(o => !o.deliverByDate);
+  const built = open.filter(o => o.productionComplete);
   const unpaid = open.filter(o => o.balance > 0.5).sort((a, b) => b.balance - a.balance);
   const noDeposit = open.filter(o => o.amount > 0 && o.paid <= 0);
 
@@ -142,6 +147,9 @@ export function buildBrief({ inwork, quickbooks, previous, now = new Date(), loo
     noDeliverByDate: noDate.length,
     unpaid: unpaid.length,
     noDeposit: noDeposit.length,
+    productionComplete: built.length,
+    productionCompleteValue: round2(built.reduce((a, o) => a + o.amount, 0)),
+    storageJobs: storageJobs.length,
     byStatus
   };
 
@@ -149,6 +157,7 @@ export function buildBrief({ inwork, quickbooks, previous, now = new Date(), loo
   if (newOrders.length) headlines.push(newOrders.length + ' new sales order' + (newOrders.length === 1 ? '' : 's') + ' since ' + since + ' (' + fmtMoney(newOrders.reduce((a, o) => a + o.amount, 0)) + ')');
   if (overdue.length) headlines.push(overdue.length + ' open order' + (overdue.length === 1 ? '' : 's') + ' past the deliver-by date');
   if (dueSoon.length) headlines.push(dueSoon.length + ' due in the next ' + dueSoonDays + ' days');
+  if (built.length) headlines.push(built.length + ' built and waiting to deliver (' + fmtMoney(built.reduce((a, o) => a + o.amount, 0)) + ')');
   if (changes.paymentsPosted.length) headlines.push(fmtMoney(changes.paymentsPosted.reduce((a, c) => a + c.delta, 0)) + ' in payments posted on ' + changes.paymentsPosted.length + ' order' + (changes.paymentsPosted.length === 1 ? '' : 's'));
   if (changes.completed.length) headlines.push(changes.completed.length + ' order' + (changes.completed.length === 1 ? '' : 's') + ' completed or dropped off the report');
   if (discrepancies.length) headlines.push(discrepancies.length + ' Inwork/QuickBooks mismatch' + (discrepancies.length === 1 ? '' : 'es') + ' to reconcile');
@@ -197,16 +206,16 @@ export function renderBriefMarkdown(b) {
   L.push('');
   L.push('## Pipeline');
   const s = b.summary;
-  L.push('| Open orders | Open value | Collected | Outstanding | New | Due ≤' + b.dueSoonDays + 'd | Overdue | No deliver-by |');
-  L.push('|---|---|---|---|---|---|---|---|');
-  L.push('| ' + [s.openOrders, fmtMoney(s.openValue), fmtMoney(s.collected), fmtMoney(s.openBalance), s.newOrders, s.dueSoon, s.overdue, s.noDeliverByDate].join(' | ') + ' |');
+  L.push('| Open orders | Open value | Collected | Outstanding | New | Built, awaiting delivery | Due ≤' + b.dueSoonDays + 'd | Overdue | No deliver-by | Storage/rental |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  L.push('| ' + [s.openOrders, fmtMoney(s.openValue), fmtMoney(s.collected), fmtMoney(s.openBalance), s.newOrders, s.productionComplete, s.dueSoon, s.overdue, s.noDeliverByDate, s.storageJobs].join(' | ') + ' |');
   L.push('');
   L.push('| Inwork status | Orders | Value | Outstanding |');
   L.push('|---|---|---|---|');
   for (const [k, v] of Object.entries(s.byStatus)) L.push('| ' + k + ' | ' + v.count + ' | ' + fmtMoney(v.amount) + ' | ' + fmtMoney(v.balance) + ' |');
   L.push('');
   if (b.newOrders.length) { L.push('## New orders (since ' + b.since + ')'); for (const o of b.newOrders) L.push(line(o, 'ordered ' + (o.date || '?') + (o.deliverBy ? ', deliver by ' + o.deliverBy : '') + (o.inworkStatus ? ', ' + o.inworkStatus : ''))); L.push(''); }
-  if (b.overdue.length) { L.push('## Past deliver-by date'); for (const o of b.overdue) L.push(line(o, 'deliver by ' + o.deliverBy + ' (' + o.daysLate + 'd late), ' + (o.inworkStatus || 'status unknown'))); L.push(''); }
+  if (b.overdue.length) { L.push('## Past deliver-by date'); for (const o of b.overdue) L.push(line(o, 'deliver by ' + o.deliverBy + ' (' + o.daysLate + 'd late), ' + (o.inworkStatus || 'status unknown') + (o.productionComplete ? ', built' : ''))); L.push(''); }
   if (b.dueSoon.length) { L.push('## Due in the next ' + b.dueSoonDays + ' days'); for (const o of b.dueSoon) L.push(line(o, 'deliver by ' + o.deliverBy + ', ' + (o.inworkStatus || 'status unknown') + (o.deliveryType ? ', ' + o.deliveryType : ''))); L.push(''); }
   const c = b.changes;
   const anyChange = c.added.length || c.completed.length || c.statusChanged.length || c.paymentsPosted.length || c.deliverByChanged.length || c.amountChanged.length;
@@ -239,7 +248,7 @@ export function ordersForApp(orders) {
     orders: orders.filter(o => !o.complete).map(o => ({
       so: o.so, make: 'Empire Safe', model: o.model, customer: o.customer, rep: o.rep, date: o.date, deliverBy: o.deliverBy,
       total: o.amount, paid: o.paid, balance: o.balance, paymentMethod: o.paymentMethod, paymentStatus: o.paymentStatus,
-      shipMethod: o.shipMethod, deliveryType: o.deliveryType, inworkStatus: o.inworkStatus, dest: o.dest || '', notes: o.notes || ''
+      shipMethod: o.shipMethod, deliveryType: o.deliveryType, inworkStatus: o.inworkStatus, productionComplete: !!o.productionComplete, dest: o.dest || '', notes: o.notes || ''
     }))
   };
 }

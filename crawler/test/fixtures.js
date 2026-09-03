@@ -65,3 +65,32 @@ export function qbJsonExport() {
     errors: []
   };
 }
+
+/** Mirrors the real workbook: one sheet per status, a master "Open SOs" sheet, footer count rows, Excel serial dates. */
+export function realLayoutWorkbook() {
+  const H = ['Customer Name', 'Date', 'On Calendar', 'Deliver By Date', 'Num', 'Item', 'Amount', 'Rep', 'Paid', 'Balance', 'Ship Via', 'Payment Method', 'Complete'];
+  const prod = [
+    H,
+    ['Margaret Streicker Porres', 45775, '', '1-01-26', 63662, 'AV-2618-16 LEFT', 11753.06, 'BS', 11753.06, 0, 'Empire Truck', 'American Express', 'x'],
+    ['Minoo Shaoul', 46237, '', '2 weeks', 64956, 'G6-1814-12', 6460.8, 'RK', 6460.8, 0, 'Empire Truck', 'WIRE', ''],
+    ['Neva McIlvaine', 46213, '', 46219, 64883, 'Svc - Black Box', 543.75, 'JN', 0, 543.75, 'Field Tech', '', ''],
+    ["Nicholas O'Byrne", 46246, '', '', 64993, 0, 1352.23, 0, 0, 1352.23, '', '', ''],
+    ['', '', '', '', 4, '', 20109.84, '', 18213.86, 1895.98, '', '', '']
+  ];
+  const hfc = [H, ['Safeguard Locksmiths LLC.', 46265, '', '9/10/26', 65038, 'V2422-13EX', 5800, 'JN', 0, 5800, 'Empire Truck', 'Visa', ''], ['', '', '', '', 1, '', 5800, '', 0, 5800, '', '', '']];
+  const transit = [['Customer Name', 'Date', 'Ship Date', 'Num', 'Item', 'Amount', 'Rep', 'Paid', 'Balance', 'Ship Via', 'Payment Method'],
+    ['Mike Duff Designs', 46183, 46218, 64791, 'TDR4-5922-20', 17480, 'BS', 17480, 0, 'ABF', 'MasterCard']];
+  const storage = [H, ['Nina Rosenwald', 44467, '', '9/29/21', 60267, 'Deliver From Storage', 1629.38, 'JT', 1629.38, 0, 'Empire Truck', 'American Express', '']];
+  const openSos = [['Customer', 'Date', 'Req Date', 'Num', 'Item / Memo', 'Amount', 'Rep', 'Paid', 'Balance', 'Status'],
+    ['Minoo Shaoul', 46237, 46262, 64956, 'G6-1814-12', 6460.8, 'RK', 6460.8, 0, 'In Production'],
+    ['Brand New', 46267, 46280, 65050, 'AV-1814-14', 4000, 'BS', 0, 4000, 'HFC'],
+    ['', '', '', 84, '', 1378584.34, '', 977009.12, 401575.22, '']];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prod), 'In Production');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hfc), 'HFC');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(transit), 'In Transit');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(storage), 'Storage & Rentals');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(openSos), 'Open SOs');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Event', 'When'], ['x', 1]]), 'tblEvents');
+  return wb;
+}

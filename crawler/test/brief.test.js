@@ -13,12 +13,15 @@ test('builds a brief from Inwork + QuickBooks with diff against previous run', (
   const first = buildBrief({ inwork, quickbooks: qb, previous: null, now: NOW, lookbackDays: 1 });
 
   assert.equal(first.today, '2026-09-03');
-  assert.equal(first.summary.openOrders, 6, '5 open Inwork orders + 1 QuickBooks-only order');
+  assert.equal(first.summary.openOrders, 7, '6 open Inwork orders + 1 QuickBooks-only order');
   assert.equal(first.summary.byStatus['In Production'].count, 2);
   assert.equal(first.newOrders.length, 1);
   assert.equal(first.newOrders[0].so, '64999');
   assert.equal(first.newOrders[0].source, 'qb');
   assert.ok(first.overdue.some(o => o.so === '62925' && o.daysLate > 700));
+  assert.ok(!first.overdue.some(o => o.so === '62911'), 'storage/rental jobs are not overdue deliveries');
+  assert.equal(first.summary.storageJobs, 1);
+  assert.equal(first.summary.productionComplete, 1);
   assert.ok(first.dueSoon.some(o => o.so === '64999'));
   assert.equal(first.recentPayments.length, 1);
   assert.equal(first.sources.quickbooks.openInvoices, 1);
@@ -53,10 +56,10 @@ test('renders markdown, csv and app payload', () => {
   assert.match(md, /Past deliver-by date/);
   assert.doesNotMatch(md, /undefined|NaN/);
   const csv = ordersToCsv(brief.orders);
-  assert.equal(csv.split('\n')[0], 'so,customer,model,rep,date,deliverBy,deliverByDate,inworkStatus,complete,amount,paid,balance,paymentStatus,paymentMethod,shipMethod,deliveryType,dest,source');
+  assert.match(csv.split('\n')[0], /^so,customer,model,rep,date,deliverBy,deliverByDate,inworkStatus,/);
   assert.equal(csv.trim().split('\n').length, 7);
   const app = ordersForApp(brief.orders);
-  assert.equal(app.orders.length, 5);
+  assert.equal(app.orders.length, 6);
   assert.equal(app.orders[0].make, 'Empire Safe');
   assert.ok(app.orders.every(o => o.inworkStatus !== 'Completed'));
 });

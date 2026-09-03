@@ -1,6 +1,11 @@
 {
-  "_comment": "Copy to crawler/config.json and edit. Paths may be absolute, relative to the synced OneDrive folder, %ENV% expanded, a OneDrive/SharePoint sharing link, or graph:/path-in-my-OneDrive.",
-  "inworkSource": "Desktop/Sales Order Inwork Report.xlsm",
+  "_comment": "Copy to crawler/config.json and edit. inworkSource is the ORIGINAL report on the Q: drive; fix the folder part of the path to match where it lives on the share. Sources may be a drive-letter or UNC path, a path relative to the synced OneDrive folder, %ENV% expanded, a OneDrive/SharePoint sharing link, or graph:/path-in-my-OneDrive.",
+  "inworkSource": "Q:\\Sales Order Inwork Report.xlsm",
+  "inworkFallbackSource": "",
+  "driveMap": {
+    "_comment": "UNC path behind each mapped drive letter, used when the letter is not mounted (scheduled tasks often cannot see mapped drives). Example: \"Q:\": \"\\\\\\\\EMPIRE-SERVER\\\\Sales\"",
+    "Q:": ""
+  },
   "quickbooksSource": "MorningBrief/quickbooks-export.json",
   "outputDir": "data/brief",
   "publishFolder": "MorningBrief",
@@ -15,8 +20,8 @@
     "scopes": ["Files.ReadWrite", "User.Read"]
   },
   "knownItems": {
-    "_comment": "Graph ids for the Inwork report found on OneDrive, for graph:drives/{driveId}/items/{itemId} style sources.",
-    "inworkDesktop": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFBKSJKP5PDRLFC23VOXGDUDHYUU",
-    "inworkDocuments": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFHCDZA6J4YYBZF3GCVRBVGJIY6L"
+    "_comment": "Graph ids of the OneDrive copies of the report, if you ever want them as inworkFallbackSource.",
+    "inworkDesktopCopy": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFBKSJKP5PDRLFC23VOXGDUDHYUU",
+    "inworkDocumentsCopy": "graph:drives/b!HgWV_1pnP02ZOz6R3EJoEz6KXUpL1ktFp8jh6ErsbVDBwVcBImUXT7GG6BkxCp2v/items/01UJQPKFHCDZA6J4YYBZF3GCVRBVGJIY6L"
   }
 }

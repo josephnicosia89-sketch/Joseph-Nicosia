@@ -31,6 +31,32 @@ export function expandHome(p) {
   return s;
 }
 
+export function isAbsolutePath(p) {
+  return path.isAbsolute(p) || path.win32.isAbsolute(p) || /^\\\\/.test(p);
+}
+
+export function isUncOrDrivePath(p) {
+  return /^[A-Za-z]:[\\/]/.test(p) || /^\\\\[^\\]+\\/.test(p);
+}
+
+/**
+ * Mapped network drives (Q:) are per-logon and often invisible to scheduled
+ * tasks. `driveMap` in config ("Q:" -> "\\\\server\\share") lets the crawler
+ * fall back to the UNC path when the letter is not mounted.
+ */
+export function alternatePaths(p, config) {
+  const out = [];
+  const map = (config && config.driveMap) || {};
+  const m = p.match(/^([A-Za-z]:)([\\/].*)?$/);
+  if (m) {
+    const unc = map[m[1].toUpperCase()] || map[m[1].toLowerCase()] || map[m[1]];
+    // Keep UNC separators on Windows; on other platforms (tests, WSL mounts) use the native separator.
+    const tail = (m[2] || '').replace(/[\\/]+/g, process.platform === 'win32' ? '\\' : path.sep);
+    if (unc) out.push(unc.replace(/[\\/]+$/, '') + tail);
+  }
+  return out;
+}
+
 export function isSharingUrl(s) {
   return /^https:\/\/(?:[\w-]+\.sharepoint\.com|1drv\.ms|onedrive\.live\.com)\//i.test(String(s || ''));
 }
@@ -48,7 +74,11 @@ export function resolveLocal(source, config) {
   if (!source) return '';
   if (isSharingUrl(source) || source.startsWith('graph:')) return '';
   const expanded = expandHome(source);
-  if (path.isAbsolute(expanded)) return fs.existsSync(expanded) ? expanded : '';
+  if (isAbsolutePath(expanded)) {
+    if (fs.existsSync(expanded)) return expanded;
+    for (const alt of alternatePaths(expanded, config)) if (fs.existsSync(alt)) return alt;
+    return '';
+  }
   if (fs.existsSync(expanded)) return path.resolve(expanded);
   const root = localOneDriveRoot(config);
   if (root) {
@@ -151,6 +181,12 @@ export async function fetchSource(source, config, state = {}) {
   if (local) {
     const st = fs.statSync(local);
     return { buffer: fs.readFileSync(local), path: local, modified: st.mtime.toISOString(), via: 'local' };
+  }
+  if (isUncOrDrivePath(source)) {
+    const alts = alternatePaths(expandHome(source), config);
+    throw new Error('Cannot reach ' + source + (alts.length ? ' (also tried ' + alts.join(', ') + ')' : '') +
+      '. If this is a mapped network drive, make sure the drive is connected for the account running the crawler, ' +
+      'or add its UNC path under "driveMap" in crawler/config.json (e.g. "Q:": "\\\\server\\share").');
   }
   if (!isSharingUrl(source) && !source.startsWith('graph:') && !(config && config.graph && config.graph.clientId)) {
     throw new Error('Source not found locally and no Graph credentials configured: ' + source);

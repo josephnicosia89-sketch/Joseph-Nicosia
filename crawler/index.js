@@ -27,6 +27,7 @@ function parseArgs(argv) {
     const next = () => argv[++i];
     if (k === '--config') a.config = next();
     else if (k === '--inwork') a.inwork = next();
+    else if (k === '--inwork-fallback') a.inworkFallback = next();
     else if (k === '--qb' || k === '--quickbooks') a.qb = next();
     else if (k === '--out') a.out = next();
     else if (k === '--lookback') a.lookbackDays = +next();
@@ -63,10 +64,23 @@ export async function run(args) {
 
   log(args.quiet, 'OneDrive sync folder:', localOneDriveRoot(cfg) || '(none — will use Microsoft Graph)');
   log(args.quiet, 'Fetching Inwork report:', inworkSrc);
-  const fetched = await fetchSource(inworkSrc, cfg, state);
+  let fetched;
+  let usedFallback = false;
+  try {
+    fetched = await fetchSource(inworkSrc, cfg, state);
+  } catch (e) {
+    const fb = args.inworkFallback || cfg.inworkFallbackSource;
+    if (!fb) throw e;
+    console.warn('Primary Inwork source failed: ' + e.message);
+    console.warn('Falling back to: ' + fb);
+    fetched = await fetchSource(fb, cfg, state);
+    usedFallback = true;
+  }
   const inwork = parseInworkBuffer(fetched.buffer, fetched.path);
   inwork.modified = fetched.modified;
   inwork.via = fetched.via;
+  inwork.usedFallback = usedFallback;
+  log(args.quiet, '  read from', fetched.path, fetched.modified ? '(modified ' + fetched.modified + ')' : '');
   log(args.quiet, '  parsed', inwork.orders.length, 'orders from', inwork.sheets.map(s => s.name + ' (' + s.orders + ')').join(', ') || 'no recognisable sheets', inwork.skippedSheets.length ? '· skipped: ' + inwork.skippedSheets.join(', ') : '');
   if (!inwork.orders.length) console.warn('  WARNING: no orders parsed. Check that the sheet has a header row with "Num" and "Customer Name".');
 

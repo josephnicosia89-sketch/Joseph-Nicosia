@@ -152,6 +152,7 @@ export function buildBrief({ inwork, quickbooks, previous, now = new Date(), loo
   if (changes.paymentsPosted.length) headlines.push(fmtMoney(changes.paymentsPosted.reduce((a, c) => a + c.delta, 0)) + ' in payments posted on ' + changes.paymentsPosted.length + ' order' + (changes.paymentsPosted.length === 1 ? '' : 's'));
   if (changes.completed.length) headlines.push(changes.completed.length + ' order' + (changes.completed.length === 1 ? '' : 's') + ' completed or dropped off the report');
   if (discrepancies.length) headlines.push(discrepancies.length + ' Inwork/QuickBooks mismatch' + (discrepancies.length === 1 ? '' : 'es') + ' to reconcile');
+  if (inwork && inwork.usedFallback) headlines.push('Inwork report was read from the fallback copy (' + (inwork.file || 'unknown') + '), not the Q: drive original — check the share connection.');
   if (!headlines.length) headlines.push('No new orders, nothing overdue, no changes since the last run.');
 
   return {
@@ -159,7 +160,7 @@ export function buildBrief({ inwork, quickbooks, previous, now = new Date(), loo
     generatedAt: now.toISOString(),
     today, since, horizon, lookbackDays, dueSoonDays,
     sources: {
-      inwork: inwork ? { file: inwork.file || '', modified: inwork.modified || '', orders: (inwork.orders || []).length, sheets: inwork.sheets || [], skippedSheets: inwork.skippedSheets || [] } : null,
+      inwork: inwork ? { file: inwork.file || '', modified: inwork.modified || '', via: inwork.via || '', usedFallback: !!inwork.usedFallback, orders: (inwork.orders || []).length, sheets: inwork.sheets || [], skippedSheets: inwork.skippedSheets || [] } : null,
       quickbooks: qbSummary,
       previous: previous ? { generatedAt: previous.generatedAt || '', orders: (previous.orders || []).length } : null
     },
@@ -189,7 +190,7 @@ export function renderBriefMarkdown(b) {
   const L = [];
   L.push('# Empire Safe — Orders & QuickBooks brief for ' + b.today);
   L.push('');
-  L.push('_Generated ' + b.generatedAt + '. Inwork report: ' + (b.sources.inwork ? (b.sources.inwork.orders + ' rows, modified ' + (b.sources.inwork.modified || 'unknown')) : 'not loaded') + '. QuickBooks: ' + (b.sources.quickbooks ? (b.sources.quickbooks.source + ', ' + b.sources.quickbooks.openSalesOrders + ' open SOs' + (b.sources.quickbooks.exportedAt ? ', exported ' + b.sources.quickbooks.exportedAt : '')) : 'not loaded') + '._');
+  L.push('_Generated ' + b.generatedAt + '. Inwork report: ' + (b.sources.inwork ? (b.sources.inwork.orders + ' rows from ' + (b.sources.inwork.file || 'unknown path') + ', modified ' + (b.sources.inwork.modified || 'unknown')) : 'not loaded') + '. QuickBooks: ' + (b.sources.quickbooks ? (b.sources.quickbooks.source + ', ' + b.sources.quickbooks.openSalesOrders + ' open SOs' + (b.sources.quickbooks.exportedAt ? ', exported ' + b.sources.quickbooks.exportedAt : '')) : 'not loaded') + '._');
   L.push('');
   L.push('## Headlines');
   for (const h of b.headlines) L.push('- ' + h);

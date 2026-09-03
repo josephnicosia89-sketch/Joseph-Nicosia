@@ -5,7 +5,7 @@ files Claude can read every morning:
 
 | Source | Where it lives | How the crawler reads it |
 |---|---|---|
-| **Sales Order Inwork Report** (`Sales Order Inwork Report.xlsm`) | Your OneDrive for Business, `Documents/Desktop/` (and an older copy in `Documents/`) | From the synced OneDrive folder on your PC, or through Microsoft Graph when running elsewhere |
+| **Sales Order Inwork Report** (`Sales Order Inwork Report.xlsm`) | The original on the **Q: drive** network share (copies also sit in your OneDrive `Documents/Desktop/` and `Documents/`) | Straight from the Q: path (or its UNC path when the drive letter is not mounted). OneDrive copies are only used if you set `inworkFallbackSource` |
 | **QuickBooks Desktop** company file | The Windows PC that runs QuickBooks | `quickbooks-export.ps1` talks to QuickBooks through its built-in qbXML request processor and writes `quickbooks-export.json` |
 
 Every run writes to `data/brief/` **and** copies the same files into
@@ -29,10 +29,16 @@ has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 
 1. Install [Node.js](https://nodejs.org) (LTS) if it is not already there.
 2. Clone or copy this repository, then in its folder run `npm install`.
-3. Copy `crawler/config.example.json` to `crawler/config.json`. The defaults
-   already point at `Desktop/Sales Order Inwork Report.xlsm` inside your synced
-   OneDrive and at `MorningBrief/quickbooks-export.json`. Change
-   `inworkSource` if the report lives somewhere else.
+3. Copy `crawler/config.example.json` to `crawler/config.json` and set
+   `inworkSource` to the report's full path on the Q: drive, for example
+   `Q:\\Sales\\Sales Order Inwork Report.xlsm` (backslashes doubled inside
+   JSON). Also fill in `driveMap` with the UNC path behind Q: (find it with
+   `net use` in a command prompt, e.g. `\\\\EMPIRE-SERVER\\Sales`). Scheduled
+   tasks often cannot see mapped drive letters, so the UNC path is what keeps
+   the 05:45 run working when nobody is logged in. Leave
+   `inworkFallbackSource` empty unless you want the OneDrive copy used when
+   the share is unreachable; when that happens the brief says so in its
+   headlines.
 4. Open QuickBooks Desktop with the company file as **Admin**, then run:
 
    ```powershell
@@ -59,6 +65,17 @@ has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 
    The task runs `crawler\run-morning.cmd`, which does the QuickBooks export
    and then the crawler, logging to `data\brief\crawler.log`.
+
+## Where the report is read from
+
+`inworkSource` accepts, in order of preference:
+
+1. A drive-letter path (`Q:\\...`) or UNC path (`\\\\server\\share\\...`) — the original.
+2. If the drive letter is not mounted, the UNC path from `driveMap`.
+3. `inworkFallbackSource`, if set (a OneDrive copy or sharing link).
+
+The brief records which file it actually read in `sources.inwork.file`, and
+`brief.md` prints it in the first line.
 
 ## Running somewhere without the OneDrive sync client
 

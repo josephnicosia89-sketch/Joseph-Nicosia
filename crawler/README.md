@@ -97,18 +97,19 @@ Customer*, export to Excel into `OneDrive/MorningBrief/`, and point
 `quickbooksSource` at that `.xlsx`. The parser understands the
 Type / Date / Num / Item / Memo / Amount / Open Balance layout.
 
-## Wiring it into the Claude morning brief
+## Wiring into the Claude morning brief
 
-Add a section to the brief's scheduled prompt so Claude fetches the file:
+Already done: the scheduled Routine **"Morning brief"** (weekdays, 09:45 UTC)
+reads `MorningBrief/brief.md` and `MorningBrief/latest.json` from OneDrive as
+its source 2 and renders an "Inwork pipeline and QuickBooks" section, feeds
+the COO scorecard, and reports the crawler's status in Feed status. Until the
+crawler is installed and has published once, the brief says "Inwork/QuickBooks
+crawler: not yet publishing" and continues from the existing 5:00 AM
+"Morning Brief - New Sales Orders.csv" export. The full prompt is versioned in
+`docs/morning-brief-routine-prompt.md`.
 
-```
-Sections:
-- Empire Safe orders: read OneDrive/MorningBrief/brief.md (Microsoft 365). Lead with the headlines, then list new orders, anything past its deliver-by date, and Inwork-vs-QuickBooks mismatches.
-```
-
-Claude finds the file by searching Microsoft 365 for `brief.md` in the
-`MorningBrief` folder. `latest.json` holds the same data for deeper questions
-("which orders have no deposit?", "what changed since yesterday?").
+Timing: the scheduled task here runs at 05:45 local so the files are in
+OneDrive well before the 09:45 UTC brief (05:45 Eastern).
 
 ## What the crawler computes
 

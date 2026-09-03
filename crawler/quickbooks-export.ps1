@@ -162,10 +162,33 @@ try {
            "C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -File `"$PSCommandPath`""
     throw $msg
   }
+  # The first-time permission dialog can only appear inside a QuickBooks window
+  # that is already open on this desktop, so check for one before connecting.
+  $qbProcs = @(Get-Process | Where-Object { $_.ProcessName -match '^QBW' })
+  if ($qbProcs.Count -eq 0) {
+    Write-Warning 'QuickBooks Desktop is not running on this PC. If you use QuickBooks through a Remote Desktop window, it runs on another machine and this export must run there instead.'
+  } else {
+    Write-Host ("QuickBooks window: " + (($qbProcs | ForEach-Object { $_.MainWindowTitle } | Where-Object { $_ }) -join ' | '))
+  }
+
   # 1 = localQBD
   $rp.OpenConnection2('', $AppName, 1)
   # 2 = qbFileOpenDoNotCare
-  $ticket = $rp.BeginSession($CompanyFile, 2)
+  try {
+    $ticket = $rp.BeginSession($CompanyFile, 2)
+  } catch {
+    $m = $_.Exception.Message
+    if ($m -match 'has not accessed this QuickBooks company data file before') {
+      Write-Host ''
+      Write-Host 'QuickBooks refused the first connection because it could not show its permission dialog. Check, in order:' -ForegroundColor Yellow
+      Write-Host '  1. QuickBooks Desktop is open ON THIS PC with the company file loaded (not through a Remote Desktop window).' -ForegroundColor Yellow
+      Write-Host '  2. You are signed in to QuickBooks as the user named "Admin", in single-user mode (File menu offers "Switch to Multi-user Mode").' -ForegroundColor Yellow
+      Write-Host '  3. QuickBooks is NOT started with "Run as administrator" while this window is a normal user (or vice versa). Right-click the QuickBooks shortcut > Properties > Advanced and match them.' -ForegroundColor Yellow
+      Write-Host '  4. No other dialog is open inside QuickBooks.' -ForegroundColor Yellow
+      Write-Host 'Then run this script again; QuickBooks will ask once whether to allow "SafeTech Morning Brief Crawler". Choose "Yes, always".' -ForegroundColor Yellow
+    }
+    throw
+  }
   try { $company = $rp.GetCurrentCompanyFileName($ticket) } catch { $company = $CompanyFile }
 
   Write-Host "Connected to QuickBooks: $company"

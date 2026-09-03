@@ -105,6 +105,16 @@ The manual steps below do the same thing one piece at a time.
 The brief records which file it actually read in `sources.inwork.file`, and
 `brief.md` prints it in the first line.
 
+## Switching QuickBooks off
+
+Create an empty file `crawler\quickbooks.off`. The daily task then skips the
+QuickBooks export, `setup.ps1` writes an empty `quickbooksSource`, and the brief
+says "QuickBooks: off". Delete the file (and re-run setup) to turn it back on.
+
+```powershell
+New-Item C:\Users\JoeN\SafeTech\crawler\quickbooks.off -ItemType File
+```
+
 ## Running somewhere without the OneDrive sync client
 
 Set `graph.clientId` in `crawler/config.json` to an Entra ID app registration

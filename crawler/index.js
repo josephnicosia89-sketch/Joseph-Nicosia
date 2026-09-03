@@ -106,7 +106,7 @@ export async function run(args) {
         if (quickbooks.errors && quickbooks.errors.length) console.warn('  QuickBooks export reported errors:', quickbooks.errors.join('; '));
       } catch (e) { console.warn('Could not parse QuickBooks data:', e.message); }
     }
-  } else log(args.quiet, 'QuickBooks: no source configured (Inwork only)');
+  } else log(args.quiet, 'QuickBooks: off (no quickbooksSource configured; Inwork report only)');
 
   let previous = null;
   const latestPath = path.join(outDir, 'latest.json');

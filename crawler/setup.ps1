@@ -24,6 +24,8 @@ param(
   [switch]$SkipTask
 )
 $ErrorActionPreference = 'Stop'
+# crawler\quickbooks.off switches the QuickBooks half off for setup, the daily task and the crawler.
+if (Test-Path (Join-Path $PSScriptRoot 'quickbooks.off')) { $SkipQuickBooks = $true }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $repo
 function Step($n, $msg) { Write-Host ""; Write-Host "[$n] $msg" -ForegroundColor Cyan }
@@ -97,7 +99,7 @@ $cfg = [ordered]@{
   inworkSource         = $InworkPath
   inworkFallbackSource = ''
   driveMap             = [ordered]@{}
-  quickbooksSource     = 'MorningBrief\quickbooks-export.json'
+  quickbooksSource     = $(if ($SkipQuickBooks) { '' } else { 'MorningBrief\quickbooks-export.json' })
   outputDir            = 'data/brief'
   publishFolder        = 'MorningBrief'
   publish              = $true
@@ -123,7 +125,7 @@ if (-not $SkipQuickBooks) {
     Write-Warning 'For the first connection QuickBooks Desktop must be OPEN on this PC, with the company file loaded, signed in as the QuickBooks "Admin" user, in single-user mode. Then re-run: powershell -ExecutionPolicy Bypass -File crawler\quickbooks-export.ps1'
     Write-Warning 'The crawler still works from the Inwork report alone until then.'
   }
-} else { Step 4 'Skipping QuickBooks export (-SkipQuickBooks)' }
+} else { Step 4 'QuickBooks export is switched off (crawler\quickbooks.off or -SkipQuickBooks)' }
 
 # ── 5. First crawl ──
 Step 5 'Running the crawler'

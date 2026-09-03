@@ -199,7 +199,7 @@ export function renderBriefMarkdown(b) {
   const L = [];
   L.push('# Empire Safe — Orders & QuickBooks brief for ' + b.today);
   L.push('');
-  L.push('_Generated ' + b.generatedAt + '. Inwork report: ' + (b.sources.inwork ? (b.sources.inwork.orders + ' rows from ' + (b.sources.inwork.file || 'unknown path') + ', modified ' + (b.sources.inwork.modified || 'unknown')) : 'not loaded') + '. QuickBooks: ' + (b.sources.quickbooks ? (b.sources.quickbooks.source + ', ' + b.sources.quickbooks.openSalesOrders + ' open SOs' + (b.sources.quickbooks.exportedAt ? ', exported ' + b.sources.quickbooks.exportedAt : '')) : 'not loaded') + '._');
+  L.push('_Generated ' + b.generatedAt + '. Inwork report: ' + (b.sources.inwork ? (b.sources.inwork.orders + ' rows from ' + (b.sources.inwork.file || 'unknown path') + ', modified ' + (b.sources.inwork.modified || 'unknown')) : 'not loaded') + '. QuickBooks: ' + (b.sources.quickbooks ? (b.sources.quickbooks.source + ', ' + b.sources.quickbooks.openSalesOrders + ' open SOs' + (b.sources.quickbooks.exportedAt ? ', exported ' + b.sources.quickbooks.exportedAt : '')) : 'off') + '._');
   L.push('');
   L.push('## Headlines');
   for (const h of b.headlines) L.push('- ' + h);

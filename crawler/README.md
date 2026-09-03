@@ -25,7 +25,27 @@ workbooks**, so it cannot read the Inwork report directly. Once the crawler
 has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 `latest.json` into the morning brief with no extra access.
 
-## One-time setup on the QuickBooks PC
+## One-time setup on the QuickBooks PC (short version)
+
+1. Get the code onto the PC: on GitHub open this branch, click **Code → Download
+   ZIP**, and unzip it to `C:\SafeTech` (any folder works).
+2. Open QuickBooks Desktop with the company file, logged in as Admin.
+3. Open **PowerShell** (Start menu, type PowerShell), then:
+
+   ```powershell
+   cd C:\SafeTech
+   powershell -ExecutionPolicy Bypass -File crawler\setup.ps1
+   ```
+
+   When QuickBooks shows the authorisation dialog, choose **"Yes, always; allow
+   access even if QuickBooks is not running"**.
+
+`setup.ps1` installs Node.js if needed, writes `crawler\config.json` for
+`Q:\Sales Order Inwork Report.xlsm` (recording the network path behind Q:),
+runs the QuickBooks export and the crawler once, and registers the 05:45 task.
+The manual steps below do the same thing one piece at a time.
+
+## One-time setup on the QuickBooks PC (manual)
 
 1. Install [Node.js](https://nodejs.org) (LTS) if it is not already there.
 2. Clone or copy this repository, then in its folder run `npm install`.

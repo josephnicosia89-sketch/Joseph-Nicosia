@@ -30,9 +30,10 @@ has published to `OneDrive/MorningBrief/`, Claude can pull `brief.md` and
 1. Install [Node.js](https://nodejs.org) (LTS) if it is not already there.
 2. Clone or copy this repository, then in its folder run `npm install`.
 3. Copy `crawler/config.example.json` to `crawler/config.json` and set
-   `inworkSource` to the report's full path on the Q: drive, for example
-   `Q:\\Sales\\Sales Order Inwork Report.xlsm` (backslashes doubled inside
-   JSON). Also fill in `driveMap` with the UNC path behind Q: (find it with
+   `inworkSource` to the report's path on the Q: drive. The report sits at the
+   root of the share, so the default `Q:\\Sales Order Inwork Report.xlsm`
+   (backslashes doubled inside JSON) is already correct. Also fill in
+   `driveMap` with the UNC path behind Q: (find it with
    `net use` in a command prompt, e.g. `\\\\EMPIRE-SERVER\\Sales`). Scheduled
    tasks often cannot see mapped drive letters, so the UNC path is what keeps
    the 05:45 run working when nobody is logged in. Leave

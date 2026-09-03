@@ -30,13 +30,34 @@ function Step($n, $msg) { Write-Host ""; Write-Host "[$n] $msg" -ForegroundColor
 
 # ── 1. Node.js ──
 Step 1 'Checking Node.js'
+$portableNode = Join-Path $repo 'node'
+if (Test-Path (Join-Path $portableNode 'node.exe')) { $env:Path = "$portableNode;$env:Path" }
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) {
-  Write-Host 'Node.js not found. Installing the LTS build with winget...'
-  winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
+  Write-Host 'Node.js not found. Trying winget (you may get a Windows "allow this app" prompt - click Yes)...'
+  try { winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements } catch { Write-Warning "winget failed: $_" }
   $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
   $node = Get-Command node -ErrorAction SilentlyContinue
-  if (-not $node) { throw 'Node.js still not on PATH. Close this window, open a new PowerShell, and run setup.ps1 again.' }
+}
+if (-not $node) {
+  # No admin rights (or the prompt was cancelled): use a portable copy inside the repo instead.
+  Write-Host 'Installing a portable copy of Node.js into the SafeTech folder (no admin needed)...'
+  $index = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json'
+  $lts = $index | Where-Object { $_.lts } | Select-Object -First 1
+  $ver = $lts.version
+  $zipName = "node-$ver-win-x64.zip"
+  $zipPath = Join-Path $env:TEMP $zipName
+  Invoke-WebRequest -Uri "https://nodejs.org/dist/$ver/$zipName" -OutFile $zipPath
+  $tmp = Join-Path $env:TEMP 'node-portable'
+  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+  Expand-Archive -Path $zipPath -DestinationPath $tmp -Force
+  if (Test-Path $portableNode) { Remove-Item $portableNode -Recurse -Force }
+  Move-Item (Join-Path $tmp "node-$ver-win-x64") $portableNode
+  $env:Path = "$portableNode;$env:Path"
+  $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+  if ($userPath -notlike "*$portableNode*") { [System.Environment]::SetEnvironmentVariable('Path', "$portableNode;$userPath", 'User') }
+  $node = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $node) { throw "Portable Node.js install failed. Expected $portableNode\node.exe" }
 }
 Write-Host "Node $(node --version) at $($node.Source)"
 

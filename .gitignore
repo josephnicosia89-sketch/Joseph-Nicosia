@@ -25,5 +25,7 @@ dist-ssr
 
 # Morning-brief crawler: local config, credentials and generated data
 crawler/config.json
+crawler/config.json.bak
+node/
 data/brief/
 .safetech-crawler/

@@ -3,7 +3,7 @@
   Registers a Windows scheduled task that runs the QuickBooks export and the
   morning-brief crawler every day before your brief.
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:45
+  powershell -ExecutionPolicy Bypass -File crawler\install-task.ps1 -Time 05:05
 #>
 param(
   [string]$Time = '05:05',

@@ -63,7 +63,7 @@ The manual steps below do the same thing one piece at a time.
    `driveMap` with the UNC path behind Q: (find it with
    `net use` in a command prompt, e.g. `\\\\EMPIRE-SERVER\\Sales`). Scheduled
    tasks often cannot see mapped drive letters, so the UNC path is what keeps
-   the 05:45 run working when nobody is logged in. Leave
+   the 05:05 run working when nobody is logged in. Leave
    `inworkFallbackSource` empty unless you want the OneDrive copy used when
    the share is unreachable; when that happens the brief says so in its
    headlines.

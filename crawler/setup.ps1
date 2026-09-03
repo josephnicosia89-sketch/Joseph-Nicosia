@@ -15,11 +15,11 @@
     4. Run the QuickBooks export once (QuickBooks must be open as Admin the first
        time so you can click "Yes, always" in its authorisation dialog).
     5. Run the crawler once and show the headlines.
-    6. Register the daily 05:05 scheduled task.
+    6. Register the daily 05:03 scheduled task.
 #>
 param(
   [string]$InworkPath = 'Q:\Sales Order Inwork Report.xlsm',
-  [string]$Time = '05:05',
+  [string]$Time = '05:03',
   [switch]$SkipQuickBooks,
   [switch]$SkipTask
 )

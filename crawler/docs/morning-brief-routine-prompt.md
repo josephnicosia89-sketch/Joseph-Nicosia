@@ -1,6 +1,6 @@
 # Morning brief routine prompt
 
-Versioned copy of the prompt on the scheduled Routine **"Morning brief"** (weekdays 09:25 UTC, 5:25 AM New York). Source 2 and the "Inwork pipeline and QuickBooks" section read the files this crawler publishes to `OneDrive/MorningBrief/`. Edit here, then apply with the Routine settings in Claude Code.
+Versioned copy of the prompt on the scheduled Routine **"Morning brief"** (weekdays 08:30 UTC, 4:30 AM New York). Source 2 and the "Inwork pipeline and QuickBooks" section read the files this crawler publishes to `OneDrive/MorningBrief/`. Edit here, then apply with the Routine settings in Claude Code.
 
 ```
 /morning
@@ -50,7 +50,7 @@ Sources each morning, in addition to the skill's defaults:
 
 4. The most recent weekly logistics report from the logistics manager.
 
-5. Today's queue-import-YYYY-MM-DD.csv, written at 5:10 by the "Production queue update" task, in the ROOT of my OneDrive Documents folder. Read only. The SharePoint search index lags by a few minutes, so a search that does not list today's file is not proof it is missing: read it by its exact path first, and only say it is missing in Feed status once a direct read has also failed.
+5. Today's queue-import-YYYY-MM-DD.csv, written at 4:15 by the "Production queue update" task, in the ROOT of my OneDrive Documents folder. Read only. The SharePoint search index lags by a few minutes, so a search that does not list today's file is not proof it is missing: read it by its exact path first, and only say it is missing in Feed status once a direct read has also failed.
 
 6. The web, for Market and risk watch. Search fresh every morning. Never state a price, tariff rate or date you have not just read from a source.
 
